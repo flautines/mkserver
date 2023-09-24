@@ -155,6 +155,7 @@ report_status() {
 	STATUS_CREATING="$LED_OFF $LED_CREATING $LED_OFF"
 	STATUS_ACTIVE="$LED_ACTIVE $LED_ACTIVE $LED_ACTIVE"
 	
+	echo -e ""
 	echo -en $STATUS_OFF
 	STATUS=$(curl -sX GET "{$API_URL}/servers/$SERVER_ID" -H "Content-Type: application/json" -H "X-API-KEY: $API_KEY" | jq -r .status)
 
@@ -163,17 +164,17 @@ report_status() {
 	do
 		case $STATUS in 
 		Pending)
-			echo -en "\r$STATUS_PENDING ($STATUS)"
+			echo -en "\r$STATUS_PENDING ($STATUS)    "
 			;;
 		
 		Creating)
-			echo -en "\r$STATUS_CREATING ($STATUS)"
+			echo -en "\r$STATUS_CREATING ($STATUS)    "
 			;;
 		esac
 		sleep 1		
 		STATUS=$(curl -sX GET "{$API_URL}/servers/$SERVER_ID" -H "Content-Type: application/json" -H "X-API-KEY: $API_KEY" | jq -r .status)		
 	done
-	echo -e "\r$STATUS_ACTIVE ($STATUS)"
+	echo -e "\r$STATUS_ACTIVE ($STATUS)    "
 	tput cnorm
 }
 
