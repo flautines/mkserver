@@ -26,6 +26,10 @@ echo -e ""
 echo -e "$SPARKLES ${TITLE_COLOR}Make Server $VERSION_COLOR${VERSION}$APICOLOR for api.clouding.io$END_ATTR $SPARKLES"
 echo -e ""
 
+#############
+## GLOBALS ##
+#############
+DATE=$(date -u +"%Y%m%d%H%M")
 INPUT="$2"
 API_KEYFILE=$HOME/clouding.key
 API_URL="https://api.clouding.io/v1"
@@ -98,9 +102,8 @@ list_images() {
 ## CREATE SERVER ##
 ###################
 server_create() {
-	HOSTNAME=server_$(get_random)
-	echo "Server name: $HOSTNAME"
-
+	HOSTNAME=server-$DATE
+	
 	FLAVOR="1x2"
 
 	##
@@ -135,8 +138,44 @@ server_create() {
 	if [ "$CHECKPASS" != "not-supported" ]; then
 		PASSWORD=$(get_random)
 	fi
+
+	STATUS=$(curl -sX POST "{$API_URL}/servers" -H "Content-Type: application/json" -H "X-API-KEY: $API_KEY" -d '{"name":"'$HOSTNAME'","hostname":"'$HOSTNAME'","flavorId":"'$FLAVOR'","firewallId":"'$DEFAULTFW'","accessConfiguration":{"sshKeyId":"'$DEFAULTKEY'","password":"'$PASSWORD'","savePassword":true},"volume":{"source":"Image","id":"'$IMAGE'","ssdGb":"'$VOLUME'"}}')
 	
-	STATUS=$(curl -sX POST "{$API_URL}/servers" -H "Content-Type: application/json" -H "X-API-KEY: $API_KEY" -d '{"name":"'$HOSTNAME'","hostname":"'$HOSTNAME'","flavorId":"'$FLAVOR'","firewallId":"'$DEFAULTFW'",}')
+	SERVER_ID=$(echo $STATUS | jq -r .id)
+}
+
+report_status() {
+	LED_OFF="\U26AB"	
+	LED_PENDING="\U1F7E0"
+	LED_CREATING="\U1F7E1"
+	LED_ACTIVE="\U1F7E2"
+
+	STATUS_OFF="$LED_OFF $LED_OFF $LED_OFF"
+	STATUS_PENDING="$LED_PENDING $LED_OFF $LED_OFF"
+	STATUS_CREATING="$LED_OFF $LED_CREATING $LED_OFF"
+	STATUS_ACTIVE="$LED_ACTIVE $LED_ACTIVE $LED_ACTIVE"
+	
+	echo -en $STATUS_OFF
+	STATUS=$(curl -sX GET "{$API_URL}/servers/$SERVER_ID" -H "Content-Type: application/json" -H "X-API-KEY: $API_KEY" | jq -r .status)
+
+	tput civis
+	while [ $STATUS != "Active" ]
+	do
+		case $STATUS in 
+		Pending)
+			echo -en "\r$STATUS_PENDING ($STATUS)"
+			;;
+		
+		Creating)
+			echo -en "\r$STATUS_CREATING ($STATUS)"
+			;;
+		esac
+		sleep 1		
+		STATUS=$(curl -sX GET "{$API_URL}/servers/$SERVER_ID" -H "Content-Type: application/json" -H "X-API-KEY: $API_KEY" | jq -r .status)		
+	done
+	echo -en "\r$STATUS_ACTIVE ($STATUS)"
+	tput cnorm
 }
 
 server_create
+report_status 
