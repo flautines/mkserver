@@ -173,7 +173,7 @@ report_status() {
 		sleep 1		
 		STATUS=$(curl -sX GET "{$API_URL}/servers/$SERVER_ID" -H "Content-Type: application/json" -H "X-API-KEY: $API_KEY" | jq -r .status)		
 	done
-	echo -en "\r$STATUS_ACTIVE ($STATUS)"
+	echo -e "\r$STATUS_ACTIVE ($STATUS)"
 	tput cnorm
 }
 
